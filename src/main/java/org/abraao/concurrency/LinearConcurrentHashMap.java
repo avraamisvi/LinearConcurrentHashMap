@@ -144,7 +144,7 @@ public class LinearConcurrentHashMap<K, V> implements ConcurrentMap<K, V> {
         }
 
         int size() {
-            return entries.length;
+            return itemsSize;
         }
 
         int findNextValidIndex(int index, K key) {
@@ -216,7 +216,7 @@ public class LinearConcurrentHashMap<K, V> implements ConcurrentMap<K, V> {
         }
 
         int hash(K key) {
-            return key.hashCode() % this.size();
+            return key.hashCode() % entries.length;
         }
     }
 
