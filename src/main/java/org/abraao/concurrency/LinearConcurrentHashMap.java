@@ -4,7 +4,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- * A open addressing and linear probing concurrent HashMap.
+ * A open addressing and <a href='https://en.wikipedia.org/wiki/Linear_probing'>linear probing</a> concurrent HashMap.
  *
  * @param <K> the type of keys maintained by this map
  * @param <V> the type of mapped values
@@ -13,6 +13,7 @@ import java.util.concurrent.ConcurrentMap;
 public class LinearConcurrentHashMap<K, V> implements ConcurrentMap<K, V> {
 
     private static final int DEFAULT_INITIAL_SIZE = 64;
+    public static final int NOT_FOUND = -1;
     private Nodes nodes;
 
     public LinearConcurrentHashMap() {
@@ -154,12 +155,12 @@ public class LinearConcurrentHashMap<K, V> implements ConcurrentMap<K, V> {
                     return i;
                 }
             }
-            return -1;
+            return NOT_FOUND;
         }
 
         Entry<K, V> findEntry(K key) {
             int index = findEntryIndex(key);
-            return index != -1 ? entries[index] : null;
+            return index != NOT_FOUND ? entries[index] : null;
         }
 
         int findEntryIndex(K key) {
@@ -170,7 +171,7 @@ public class LinearConcurrentHashMap<K, V> implements ConcurrentMap<K, V> {
                     return i;
                 }
             }
-            return -1;
+            return NOT_FOUND;
         }
 
         boolean isFull() {
@@ -207,12 +208,36 @@ public class LinearConcurrentHashMap<K, V> implements ConcurrentMap<K, V> {
         V remove(K key) {
             int index = nodes.findEntryIndex(key);
             V previousValue = null;
-            if (index != 0) {
-                previousValue = entries[index].getValue();
-                entries[index] = null;
+            if (index != NOT_FOUND) {
+                previousValue = entries[index].value;
+                int lastAdded = findLastAdded(index, entries[index].hash);
+                if(lastAdded > 0) {
+                    swap(index, lastAdded);
+                } else {
+                    entries[index] = null;
+                }
                 itemsSize--;
             }
             return previousValue;
+        }
+
+        int findLastAdded(int index, int hash) {
+            for (int i = index + 1; i < entries.length; i++) {
+                Node<K, V> entry = entries[i];
+                if (entry == null) {
+                    return NOT_FOUND;
+                } else if (entry.hash == hash) {
+                    return i;
+                }
+            }
+            return NOT_FOUND;
+        }
+
+        private void swap(int target, int source) {
+            if (target < source && entries[source] != null) {
+                entries[target] = entries[source];
+                entries[source] = null;
+            }
         }
 
         int hash(K key) {
